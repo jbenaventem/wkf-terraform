@@ -1,0 +1,94 @@
+name: CI Terraform Workflow
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        type: string
+        description: Execution Runners
+      version:
+        type: string
+        description: Version Terraform to use
+    
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@625cb76050397c6b3a1789261eb129f8f39a206b
+        with:
+          terraform_version: ${{ inputs.version }}
+  
+      - name: Run terraform fmt check
+        run: terraform fmt -check -diff
+
+
+  plan:
+    name: Plan
+    env:
+      TF_VAR_allowed_account_id: ${{ secrets.ALLOWED_ACCOUNT_ID }}
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@625cb76050397c6b3a1789261eb129f8f39a206b
+
+        with:
+          terraform_version: ${{ inputs.version }}
+
+      - name: Initialize Terraform
+        run: terraform init -input=false
+
+      - name: Plan Terraform
+        id: plan
+        continue-on-error: true
+        run: |
+          terraform plan -input=false -no-color -out=tfplan \
+          && terraform show -no-color tfplan
+      # Sed is taking all lines that begin with one or more spaces followed by a `+` or `-`.
+      # It stores the amount of spaces in `\1` and the +/- in `\2`.
+      # Then replace that portion of the line with `\2\1` (+/- followed by the number of matched spaces).
+      - name: Reformat Plan
+        run: |
+          echo '${{ steps.plan.outputs.stdout || steps.plan.outputs.stderr }}' \
+          | sed -E 's/^([[:space:]]+)([-+])/\2\1/g' > plan.txt
+      - name: Put Plan in Env Var
+        run: |
+          PLAN=$(cat plan.txt)
+          echo "PLAN<<EOF" >> $GITHUB_ENV
+          echo "$PLAN" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+      - name: Add plan to PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        env:
+          TFPLAN_STDOUT: "${{ steps.tf.outputs.terraform_plan }}"
+        with:
+          github-token: ${{ secrets.token }}
+          script: |
+            const tfplanArray = process.env.TFPLAN_STDOUT.split('\n')
+            const tfplanResultLine = tfplanArray.find(value => /^Plan:/.test(value))
+            const planSummary = tfplanResultLine ?  tfplanResultLine.split(':')[1].trim() : "No changes. Your infrastructure matches the configuration."
+            const output = `### Terraform Plan
+            ${planSummary}
+            <details><summary>Show Plan</summary>
+            
+            \`\`\`terraform
+            ${process.env.TFPLAN_STDOUT}
+            \`\`\`
+            </details>
+            *Pusher: @${{ github.actor }}*`
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
