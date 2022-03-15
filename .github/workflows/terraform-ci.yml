@@ -9,6 +9,16 @@ on:
       version:
         type: string
         description: Version Terraform to use
+    outputs:
+      terraform_has_changes:
+        description: 'Whether or not the Terraform plan contained changes.'
+        value: "${{  jobs.terraform.outputs.terraform_has_changes }}"
+      terraform_plan:
+        description: 'Terraform plan in a human-readable form.'
+        value: "${{ jobs.terraform.outputs.terraform_plan }}"
+      terraform_output:
+        description: 'The Terraform outputs in JSON format.'
+        value: "${{ jobs.terraform.outputs.terraform_output }}"
     
 jobs:
   lint:
@@ -31,7 +41,11 @@ jobs:
     name: Plan
     env:
       TF_VAR_allowed_account_id: ${{ secrets.ALLOWED_ACCOUNT_ID }}
-    runs-on: ubuntu-20.04
+    outputs:
+      terraform_has_changes: ${{ steps.tf.outputs.terraform_has_changes }}
+      terraform_plan: "${{ steps.tf.outputs.terraform_plan }}"
+      terraform_output: "${{ steps.tf.outputs.terraform_output }}"
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
     steps:
@@ -66,6 +80,7 @@ jobs:
           echo "PLAN<<EOF" >> $GITHUB_ENV
           echo "$PLAN" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
+
       - name: Add plan to PR comment
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
