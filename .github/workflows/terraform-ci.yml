@@ -9,6 +9,10 @@ on:
       version:
         type: string
         description: Version Terraform to use
+    secrets:
+      token:
+        type: string
+        description: GitHUB Token
     outputs:
       terraform_has_changes:
         description: 'Whether or not the Terraform plan contained changes.'
