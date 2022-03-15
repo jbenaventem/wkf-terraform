@@ -65,6 +65,7 @@ jobs:
           PLAN=$(cat plan.txt)
           echo "PLAN<<EOF" >> $GITHUB_ENV
           echo "$PLAN" >> $GITHUB_ENV
+<<<<<<< HEAD
           echo "EOF" >> $GITHUB_ENV
       - name: Add plan to PR comment
         if: github.event_name == 'pull_request'
@@ -92,3 +93,6 @@ jobs:
               repo: context.repo.repo,
               body: output
             })
+=======
+          echo "EOF" >> $GITHUB_ENV
+>>>>>>> b991fa4cd9509b4900579a205a94df22070a2b8e
