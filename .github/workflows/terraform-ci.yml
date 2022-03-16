@@ -9,10 +9,6 @@ on:
       version:
         type: string
         description: Version Terraform to use
-    secrets:
-      token:
-        required: true
-        description: GitHUB Token
     outputs:
       terraform_has_changes:
         description: 'Whether or not the Terraform plan contained changes.'
@@ -91,7 +87,7 @@ jobs:
         env:
           TFPLAN_STDOUT: "${{ steps.tf.outputs.terraform_plan }}"
         with:
-          github-token: ${{ secrets.token }}
+          github-token: ${{ github.token }}
           script: |
             const tfplanArray = process.env.TFPLAN_STDOUT.split('\n')
             const tfplanResultLine = tfplanArray.find(value => /^Plan:/.test(value))
