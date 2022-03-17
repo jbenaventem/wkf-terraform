@@ -9,6 +9,9 @@ on:
       version:
         type: string
         description: Version Terraform to use
+    secrets:
+      terraform_token:
+        required: true
     outputs:
       terraform_has_changes:
         description: 'Whether or not the Terraform plan contained changes.'
@@ -32,6 +35,7 @@ jobs:
         uses: hashicorp/setup-terraform@625cb76050397c6b3a1789261eb129f8f39a206b
         with:
           terraform_version: ${{ inputs.version }}
+          cli_config_credentials_token: ${{ secrets.terraform_token }}
   
       - name: Run terraform fmt check
         run: terraform fmt -check -diff
