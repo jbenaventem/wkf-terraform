@@ -62,8 +62,8 @@ jobs:
         with:
           terraform_version: ${{ inputs.version }}
 
-      - name: Terraform Valite 
-        run: terraform validate
+      #- name: Terraform Valite 
+      #  run: terraform validate
 
   scan-security:
     name: tfsec sarif report
